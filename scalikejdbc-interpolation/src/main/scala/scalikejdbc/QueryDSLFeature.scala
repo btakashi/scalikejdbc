@@ -475,7 +475,7 @@ trait QueryDSLFeature { self: SQLInterpolationFeature with SQLSyntaxSupportFeatu
   case class InsertSQLBuilder(override val sql: SQLSyntax) extends SQLBuilder[UpdateOperation] {
 
     def columns(columns: SQLSyntax*): InsertSQLBuilder = this.copy(sql = sqls"${sql} (${sqls.csv(columns: _*)})")
-    @deprecated("values is not type safe. use `namedValues` instead.")
+    @deprecated(message = "values is not type safe. use `namedValues` instead.", since = "2.4.0")
     def values(values: Any*): InsertSQLBuilder = {
       val vs = sqls.csv(values.map(v => sqls"${v}"): _*)
       this.copy(sql = sqls"${sql} values (${vs})")

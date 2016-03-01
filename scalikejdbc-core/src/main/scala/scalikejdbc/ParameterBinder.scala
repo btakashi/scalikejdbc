@@ -24,6 +24,17 @@ trait ParameterBinder {
 
 }
 
+trait ContainsValueParameterBinder extends ParameterBinder {
+  type ValueType
+  def value: ValueType
+  override def toString: String = s"ContainsValueParameterBinder(value=$value)"
+}
+object ContainsValueParameterBinder {
+  def unapply(binder: ContainsValueParameterBinder): Option[binder.ValueType] = {
+    Option(binder.value)
+  }
+}
+
 /**
  * ParameterBinder factory.
  */
@@ -38,8 +49,18 @@ object ParameterBinder {
     }
   }
 
+  def apply[A](binder: (PreparedStatement, Int) => Unit, value: A): ContainsValueParameterBinder = {
+    val value_ = value
+    new ContainsValueParameterBinder {
+      type ValueType = A
+      val value = value_
+      override def apply(stmt: PreparedStatement, idx: Int): Unit = binder.apply(stmt, idx)
+    }
+  }
+
   val NullParameterBinder = new ParameterBinder {
     def apply(stmt: PreparedStatement, idx: Int): Unit = stmt.setObject(idx, null)
+    override def toString: String = s"ParameterBinder(value=NULL)"
   }
 
 }
