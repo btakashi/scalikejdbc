@@ -30,8 +30,10 @@ trait ContainsValueParameterBinder extends ParameterBinder {
   override def toString: String = s"ContainsValueParameterBinder(value=$value)"
 }
 object ContainsValueParameterBinder {
-  def unapply(binder: ContainsValueParameterBinder): Option[binder.ValueType] = {
-    Option(binder.value)
+  def unapply(a: Any): Option[Any] = {
+    PartialFunction.condOpt(a) {
+      case binder: ContainsValueParameterBinder => binder.value
+    }
   }
 }
 
