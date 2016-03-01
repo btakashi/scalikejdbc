@@ -285,10 +285,6 @@ object ScalikeJDBCProjects extends Build {
           "ch.qos.logback"  %  "logback-classic"  % _logbackVersion   % "test",
           "org.hibernate"   %  "hibernate-core"   % _hibernateVersion % "test"
         ) ++ scalaTestDependenciesInTestScope(scalatestVersion.value) ++ jdbcDriverDependenciesInTestScope ++ macroDependenciesInCompileScope(scalaVersion.value)
-      },
-      unmanagedSourceDirectories in Compile <+= (scalaVersion, sourceDirectory in Compile){(v, dir) =>
-        if (v.startsWith("2.10")) dir / "scala2.10"
-        else dir / "scala2.11"
       }
     )
   ) dependsOn(scalikejdbcLibrary)
