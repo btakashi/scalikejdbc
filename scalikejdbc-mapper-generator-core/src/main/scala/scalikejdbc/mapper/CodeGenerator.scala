@@ -323,7 +323,7 @@ class CodeGenerator(table: Table, specifiedClassName: Option[String] = None)(imp
           createColumns.map(c => 4.indent + "${" + c.nameInScala + "}").mkString(comma + eol)
         case GeneratorTemplate.queryDsl =>
           // id, name
-          createColumns.map(c => 4.indent + c.nameInScala).mkString(comma + eol)
+          createColumns.map(c => 4.indent + "column." + c.nameInScala + " -> " + c.nameInScala).mkString(comma + eol)
       }
 
       // def create(
@@ -338,20 +338,20 @@ class CodeGenerator(table: Table, specifiedClassName: Option[String] = None)(imp
             "sql\"\"\"" + eol + 3.indent + "insert into ${" + className + ".table} ("
           case GeneratorTemplate.queryDsl =>
             // withSQL { insert.into(User).columns(
-            "withSQL {" + eol + 3.indent + "insert.into(" + className + ").columns("
+            "withSQL {" + eol + 3.indent + "insert.into(" + className + ").namedValues("
         }) + eol +
         (config.template match {
           case GeneratorTemplate.interpolation =>
             createColumns.map(c => 4.indent + "${" + "column." + c.nameInScala + "}").mkString(comma + eol) + eol + 3.indent + ") values (" + eol
           case GeneratorTemplate.queryDsl =>
-            createColumns.map(c => 4.indent + "column." + c.nameInScala).mkString(comma + eol) + eol + 3.indent + ").values(" + eol
+            ""
         }) +
         placeHolderPart + eol + 3.indent + ")" + eol +
         (config.template match {
           case GeneratorTemplate.interpolation =>
-            3.indent + "\"\"\"" + table.autoIncrementColumns.headOption.map(_ => ".updateAndReturnGeneratedKey.apply()").getOrElse(".update.apply()")
+            3.indent + "\"\"\"" + (if (table.autoIncrementColumns.nonEmpty) "}.updateAndReturnGeneratedKey.apply()" else "}.update.apply()")
           case GeneratorTemplate.queryDsl =>
-            2.indent + table.autoIncrementColumns.headOption.map(_ => "}.updateAndReturnGeneratedKey.apply()").getOrElse("}.update.apply()")
+            2.indent + (if (table.autoIncrementColumns.nonEmpty) "}.updateAndReturnGeneratedKey.apply()" else "}.update.apply()")
         }) +
         eol +
         eol +
