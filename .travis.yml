@@ -2,7 +2,7 @@ language: scala
 
 scala:
   - 2.10.6
-  - 2.11.8-d6b559f-SNAPSHOT
+  - 2.11.7
 
 jdk:
   - oraclejdk7
