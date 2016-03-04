@@ -9,8 +9,7 @@ class SQLSyntaxSpec extends FlatSpec with Matchers {
   import Implicits._
 
   val parameterExtractor: Any => Any = {
-    case ContainsValueParameterBinder(v) => v
-    case ParameterBinder.NullParameterBinder => null
+    case ParameterBinder(v) => v
     case x => x
   }
 

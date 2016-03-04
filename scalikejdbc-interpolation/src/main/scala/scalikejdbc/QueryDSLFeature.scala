@@ -480,7 +480,7 @@ trait QueryDSLFeature { self: SQLInterpolationFeature with SQLSyntaxSupportFeatu
       val vs = sqls.csv(values.map(v => sqls"${v}"): _*)
       this.copy(sql = sqls"${sql} values (${vs})")
     }
-    def namedValues(columnsAndValues: (SQLSyntax, ParameterBinder)*): InsertSQLBuilder = {
+    def namedValues(columnsAndValues: (SQLSyntax, EssentialParameterBinder)*): InsertSQLBuilder = {
       val (cs, vs) = columnsAndValues.unzip
       columns(cs: _*).values(vs: _*)
     }
@@ -513,7 +513,7 @@ trait QueryDSLFeature { self: SQLInterpolationFeature with SQLSyntaxSupportFeatu
       with WhereSQLBuilder[UpdateOperation] {
 
     def set(sqlPart: SQLSyntax): UpdateSQLBuilder = this.copy(sql = sqls"${sql} set ${sqlPart}")
-    def set(tuples: (SQLSyntax, ParameterBinder)*): UpdateSQLBuilder = set(sqls.csv(tuples.map(each => sqls"${each._1} = ${each._2}"): _*))
+    def set(tuples: (SQLSyntax, EssentialParameterBinder)*): UpdateSQLBuilder = set(sqls.csv(tuples.map(each => sqls"${each._1} = ${each._2}"): _*))
 
     override def append(part: SQLSyntax): UpdateSQLBuilder = this.copy(sql = sqls"${sql} ${part}")
   }

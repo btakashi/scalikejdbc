@@ -7,18 +7,19 @@ import scalikejdbc.interpolation.SQLSyntax
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context
 
-private[scalikejdbc] case class SQLSyntaxParameterBinder(syntax: SQLSyntax) extends ParameterBinder {
+private[scalikejdbc] case class SQLSyntaxParameterBinder(syntax: SQLSyntax) extends ParameterBinder[SQLSyntax] {
+  val value = syntax
   def apply(stmt: PreparedStatement, idx: Int): Unit = ()
 }
 
 trait ParameterBinderFactory[A] { self =>
 
-  def apply(value: A): ParameterBinder
+  def apply(value: A): ParameterBinder[A]
 
-  def contramap[B](f: B => A): ParameterBinderFactory[B] = new ParameterBinderFactory[B] {
-    def apply(value: B): ParameterBinder = {
+  def bimap[B](f: A => B, g: B => A): ParameterBinderFactory[B] = new ParameterBinderFactory[B] {
+    def apply(value: B): ParameterBinder[B] = {
       if (value == null) ParameterBinder.NullParameterBinder
-      else self(f(value))
+      else self(g(value)).map(f)
     }
   }
 
@@ -27,9 +28,9 @@ trait ParameterBinderFactory[A] { self =>
 object ParameterBinderFactory extends LowPriorityImplicitsParameterBinderFactory1 {
 
   def apply[A](f: A => (PreparedStatement, Int) => Unit): ParameterBinderFactory[A] = new ParameterBinderFactory[A] {
-    def apply(value: A): ParameterBinder = {
+    def apply(value: A): ParameterBinder[A] = {
       if (value == null) ParameterBinder.NullParameterBinder
-      else ParameterBinder(f(value), value)
+      else ParameterBinder(value, f(value))
     }
   }
 
@@ -48,25 +49,25 @@ object ParameterBinderFactory extends LowPriorityImplicitsParameterBinderFactory
   implicit val sqlTimeParameterBinderFactory: ParameterBinderFactory[java.sql.Time] = ParameterBinderFactory { v => (ps, idx) => ps.setTime(idx, v) }
   implicit val sqlTimestampParameterBinderFactory: ParameterBinderFactory[java.sql.Timestamp] = ParameterBinderFactory { v => (ps, idx) => ps.setTimestamp(idx, v) }
   implicit val urlParameterBinderFactory: ParameterBinderFactory[java.net.URL] = ParameterBinderFactory { v => (ps, idx) => ps.setURL(idx, v) }
-  implicit val utilDateParameterBinderFactory: ParameterBinderFactory[java.util.Date] = sqlTimestampParameterBinderFactory.contramap(_.toSqlTimestamp)
-  implicit val jodaDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.DateTime] = utilDateParameterBinderFactory.contramap(_.toDate)
-  implicit val jodaLocalDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDateTime] = utilDateParameterBinderFactory.contramap(_.toDate)
-  implicit val jodaLocalDateParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDate] = sqlDateParameterBinderFactory.contramap(_.toDate.toSqlDate)
-  implicit val jodaLocalTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalTime] = sqlTimeParameterBinderFactory.contramap(_.toSqlTime)
+  implicit val utilDateParameterBinderFactory: ParameterBinderFactory[java.util.Date] = sqlTimestampParameterBinderFactory.bimap(identity, _.toSqlTimestamp)
+  implicit val jodaDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.DateTime] = utilDateParameterBinderFactory.bimap(_.toJodaDateTime, _.toDate)
+  implicit val jodaLocalDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDateTime] = utilDateParameterBinderFactory.bimap(_.toJodaLocalDateTime, _.toDate)
+  implicit val jodaLocalDateParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDate] = sqlDateParameterBinderFactory.bimap(_.toJodaLocalDate, _.toDate.toSqlDate)
+  implicit val jodaLocalTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalTime] = sqlTimeParameterBinderFactory.bimap(_.toJodaLocalTime, _.toSqlTime)
   implicit val inputStreamParameterBinderFactory: ParameterBinderFactory[InputStream] = ParameterBinderFactory { v => (ps, idx) => ps.setBinaryStream(idx, v) }
   implicit val nullParameterBinderFactory: ParameterBinderFactory[Null] = new ParameterBinderFactory[Null] { def apply(value: Null) = ParameterBinder.NullParameterBinder }
   implicit val noneParameterBinderFactory: ParameterBinderFactory[None.type] = new ParameterBinderFactory[None.type] { def apply(value: None.type) = ParameterBinder.NullParameterBinder }
   implicit val sqlSyntaxParameterBinderFactory: ParameterBinderFactory[SQLSyntax] = new ParameterBinderFactory[SQLSyntax] { def apply(value: SQLSyntax) = SQLSyntaxParameterBinder(value) }
-  implicit val optionalSqlSyntaxParameterBinderFactory: ParameterBinderFactory[Option[SQLSyntax]] = sqlSyntaxParameterBinderFactory.contramap(_ getOrElse SQLSyntax.empty)
+  implicit val optionalSqlSyntaxParameterBinderFactory: ParameterBinderFactory[Option[SQLSyntax]] = sqlSyntaxParameterBinderFactory.bimap(Option.apply, _ getOrElse SQLSyntax.empty)
 
 }
 
 trait LowPriorityImplicitsParameterBinderFactory1 extends LowPriorityImplicitsParameterBinderFactory0 {
 
   implicit def optionalParameterBinderFactory[A](implicit ev: ParameterBinderFactory[A]): ParameterBinderFactory[Option[A]] = new ParameterBinderFactory[Option[A]] {
-    def apply(value: Option[A]): ParameterBinder = {
+    def apply(value: Option[A]): ParameterBinder[Option[A]] = {
       if (value == null) ParameterBinder.NullParameterBinder
-      else value.fold(ParameterBinder.NullParameterBinder)(ev.apply)
+      else value.fold[ParameterBinder[Option[A]]](ParameterBinder.NullParameterBinder)(v => ev(v).map(Option.apply))
     }
   }
 
@@ -103,8 +104,8 @@ private[scalikejdbc] object ParameterBinderFactoryMacro {
   def any[A: c.WeakTypeTag](c: Context): c.Expr[ParameterBinderFactory[A]] = {
     import c.universe._
     val A = weakTypeTag[A].tpe
-    if (A.toString.startsWith("java.time.")) c.Expr[ParameterBinderFactory[A]](q"scalikejdbc.TypeUnbinder.jsr310TypeUnbinder[$A]")
-    else c.abort(c.enclosingPosition, s"Could not find an implicit value of the TypeUnbinder[$A].")
+    if (A.toString.startsWith("java.time.")) c.Expr[ParameterBinderFactory[A]](q"scalikejdbc.ParameterBinderFactory.jsr310ParameterBinderFactory[$A]")
+    else c.abort(c.enclosingPosition, s"Could not find an implicit value of the ParameterBinderFactory[$A].")
   }
 
 }

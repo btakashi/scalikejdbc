@@ -1,6 +1,6 @@
 package scalikejdbc.interpolation
 
-import scalikejdbc.{ ParameterBinderFactory, ParameterBinder }
+import scalikejdbc.{ ParameterBinderFactory, EssentialParameterBinder }
 
 /**
  * Value as a part of SQL syntax.
@@ -191,7 +191,7 @@ class SQLSyntax private[scalikejdbc] (val value: String, val parameters: Seq[Any
 
   def stripMargin(marginChar: Char): SQLSyntax = new SQLSyntax(value.stripMargin(marginChar), parameters)
 
-  def -> [A](value: A)(implicit ev: ParameterBinderFactory[A]): (SQLSyntax, ParameterBinder) = (this, ev(value))
+  def -> [A](value: A)(implicit ev: ParameterBinderFactory[A]): (SQLSyntax, EssentialParameterBinder) = (this, ev(value))
 }
 
 /**
