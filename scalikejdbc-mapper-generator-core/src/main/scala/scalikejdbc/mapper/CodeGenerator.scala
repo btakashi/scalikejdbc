@@ -349,7 +349,7 @@ class CodeGenerator(table: Table, specifiedClassName: Option[String] = None)(imp
         placeHolderPart + eol + 3.indent + ")" + eol +
         (config.template match {
           case GeneratorTemplate.interpolation =>
-            3.indent + "\"\"\"" + (if (table.autoIncrementColumns.nonEmpty) "}.updateAndReturnGeneratedKey.apply()" else "}.update.apply()")
+            3.indent + "\"\"\"" + (if (table.autoIncrementColumns.nonEmpty) ".updateAndReturnGeneratedKey.apply()" else ".update.apply()")
           case GeneratorTemplate.queryDsl =>
             2.indent + (if (table.autoIncrementColumns.nonEmpty) "}.updateAndReturnGeneratedKey.apply()" else "}.update.apply()")
         }) +
