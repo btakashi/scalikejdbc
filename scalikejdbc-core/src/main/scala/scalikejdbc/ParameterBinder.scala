@@ -30,7 +30,8 @@ trait EssentialParameterBinder { self =>
 }
 trait ParameterBinder[A] extends EssentialParameterBinder { self =>
   type ValueType = A
-  def map[B](f: A => B): ParameterBinder[B] = new ParameterBinder[B] {
+  // [[scalikejdbc.ParameterBinder#map]] breaks the Functor-law
+  private[scalikejdbc] def map[B](f: A => B): ParameterBinder[B] = new ParameterBinder[B] {
     lazy val value: B = f(self.value)
     def apply(stmt: PreparedStatement, idx: Int): Unit = self(stmt, idx)
   }
