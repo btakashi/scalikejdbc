@@ -325,7 +325,7 @@ class CodeGenerator(table: Table, specifiedClassName: Option[String] = None)(imp
           // id, name
           createColumns.map { c =>
             4.indent +
-              (if (c.isAny) "column." + c.nameInScala + " -> ParameterBinder(" + c.nameInScala + ", (ps, i) => ps.setObject(i, " + c.nameInScala + "))"
+              (if (c.isAny) "(column." + c.nameInScala + ", ParameterBinder(" + c.nameInScala + ", (ps, i) => ps.setObject(i, " + c.nameInScala + ")))"
               else "column." + c.nameInScala + " -> " + c.nameInScala)
           }.mkString(comma + eol)
       }
