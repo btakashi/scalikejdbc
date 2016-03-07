@@ -408,8 +408,11 @@ class CodeGenerator(table: Table, specifiedClassName: Option[String] = None)(imp
           // ${column.id} = ${entity.id}, ${column.name} = ${entity.name}
           allColumns.map(c => 4.indent + "${column." + c.nameInScala + "} = ${entity." + c.nameInScala + "}").mkString(comma + eol)
         case GeneratorTemplate.queryDsl =>
-          // column.id -> entity.id, column.name -> entity.name
-          allColumns.map(c => 4.indent + "column." + c.nameInScala + " -> entity." + c.nameInScala).mkString(comma + eol)
+          allColumns.map { c =>
+            4.indent +
+              (if (c.isAny) "(column." + c.nameInScala + ", ParameterBinder(" + c.nameInScala + ", (ps, i) => ps.setObject(i, " + c.nameInScala + ")))"
+              else "column." + c.nameInScala + " -> " + c.nameInScala)
+          }.mkString(comma + eol)
       }
 
       val wherePart = config.template match {
