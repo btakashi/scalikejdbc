@@ -16,7 +16,7 @@ trait ParameterBinderFactory[A] { self =>
 
   def apply(value: A): ParameterBinder[A]
 
-  def bimap[B](f: A => B, g: B => A): ParameterBinderFactory[B] = new ParameterBinderFactory[B] {
+  def xmap[B](f: A => B, g: B => A): ParameterBinderFactory[B] = new ParameterBinderFactory[B] {
     def apply(value: B): ParameterBinder[B] = {
       if (value == null) ParameterBinder.NullParameterBinder
       else self(g(value)).map(f)
@@ -49,16 +49,16 @@ object ParameterBinderFactory extends LowPriorityImplicitsParameterBinderFactory
   implicit val sqlTimeParameterBinderFactory: ParameterBinderFactory[java.sql.Time] = ParameterBinderFactory { v => (ps, idx) => ps.setTime(idx, v) }
   implicit val sqlTimestampParameterBinderFactory: ParameterBinderFactory[java.sql.Timestamp] = ParameterBinderFactory { v => (ps, idx) => ps.setTimestamp(idx, v) }
   implicit val urlParameterBinderFactory: ParameterBinderFactory[java.net.URL] = ParameterBinderFactory { v => (ps, idx) => ps.setURL(idx, v) }
-  implicit val utilDateParameterBinderFactory: ParameterBinderFactory[java.util.Date] = sqlTimestampParameterBinderFactory.bimap(identity, _.toSqlTimestamp)
-  implicit val jodaDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.DateTime] = utilDateParameterBinderFactory.bimap(_.toJodaDateTime, _.toDate)
-  implicit val jodaLocalDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDateTime] = utilDateParameterBinderFactory.bimap(_.toJodaLocalDateTime, _.toDate)
-  implicit val jodaLocalDateParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDate] = sqlDateParameterBinderFactory.bimap(_.toJodaLocalDate, _.toDate.toSqlDate)
-  implicit val jodaLocalTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalTime] = sqlTimeParameterBinderFactory.bimap(_.toJodaLocalTime, _.toSqlTime)
+  implicit val utilDateParameterBinderFactory: ParameterBinderFactory[java.util.Date] = sqlTimestampParameterBinderFactory.xmap(identity, _.toSqlTimestamp)
+  implicit val jodaDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.DateTime] = utilDateParameterBinderFactory.xmap(_.toJodaDateTime, _.toDate)
+  implicit val jodaLocalDateTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDateTime] = utilDateParameterBinderFactory.xmap(_.toJodaLocalDateTime, _.toDate)
+  implicit val jodaLocalDateParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalDate] = sqlDateParameterBinderFactory.xmap(_.toJodaLocalDate, _.toDate.toSqlDate)
+  implicit val jodaLocalTimeParameterBinderFactory: ParameterBinderFactory[org.joda.time.LocalTime] = sqlTimeParameterBinderFactory.xmap(_.toJodaLocalTime, _.toSqlTime)
   implicit val inputStreamParameterBinderFactory: ParameterBinderFactory[InputStream] = ParameterBinderFactory { v => (ps, idx) => ps.setBinaryStream(idx, v) }
   implicit val nullParameterBinderFactory: ParameterBinderFactory[Null] = new ParameterBinderFactory[Null] { def apply(value: Null) = ParameterBinder.NullParameterBinder }
   implicit val noneParameterBinderFactory: ParameterBinderFactory[None.type] = new ParameterBinderFactory[None.type] { def apply(value: None.type) = ParameterBinder.NullParameterBinder }
   implicit val sqlSyntaxParameterBinderFactory: ParameterBinderFactory[SQLSyntax] = new ParameterBinderFactory[SQLSyntax] { def apply(value: SQLSyntax) = SQLSyntaxParameterBinder(value) }
-  implicit val optionalSqlSyntaxParameterBinderFactory: ParameterBinderFactory[Option[SQLSyntax]] = sqlSyntaxParameterBinderFactory.bimap(Option.apply, _ getOrElse SQLSyntax.empty)
+  implicit val optionalSqlSyntaxParameterBinderFactory: ParameterBinderFactory[Option[SQLSyntax]] = sqlSyntaxParameterBinderFactory.xmap(Option.apply, _ getOrElse SQLSyntax.empty)
 
 }
 
