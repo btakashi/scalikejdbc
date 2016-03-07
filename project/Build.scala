@@ -37,7 +37,6 @@ object ScalikeJDBCProjects extends Build {
     publishTo <<= version { (v: String) => _publishTo(v) },
     publishMavenStyle := true,
     resolvers ++= _resolvers,
-    resolvers in Global += "pr" at "https://scala-ci.typesafe.com/artifactory/scala-pr-validation-snapshots/",
     // https://github.com/sbt/sbt/issues/2217
     fullResolvers ~= { _.filterNot(_.name == "jcenter") },
     transitiveClassifiers in Global := Seq(Artifact.SourceClassifier),
